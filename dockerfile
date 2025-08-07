@@ -39,16 +39,19 @@ RUN a2enmod rewrite
 # Install Composer
 COPY --from=composer:2.6 /usr/bin/composer /usr/bin/composer
 
-# Set working directory
+# Set working directory to where Mautic expects
 WORKDIR /var/www/html
 
-# Copy project files
+# Copy all project files into the image
 COPY . .
 
-# Run Composer with more memory and auto flags
-RUN COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader --ignore-platform-reqs
+# Set memory limits for Composer and PHP CLI
+ENV COMPOSER_MEMORY_LIMIT=-1
 
-# Install NPM dependencies for Mautic assets
+# Install PHP dependencies with CLI memory override
+RUN php -d memory_limit=768M /usr/bin/composer install --no-dev --optimize-autoloader --ignore-platform-reqs
+
+# Install NPM dependencies for Mautic assets (skip failure)
 RUN npm ci || true
 
 # Set permissions
@@ -59,3 +62,4 @@ EXPOSE 80
 
 # Start Apache
 CMD ["apache2-foreground"]
+
