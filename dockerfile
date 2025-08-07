@@ -1,10 +1,10 @@
-#Add custom Dockerfile for Railway deployment
-FROM php:8.1-apache
+FROM php:8.2-apache
 
-# Install dependencies
+# Install PHP extensions
 RUN apt-get update && apt-get install -y \
     unzip \
     git \
+    zip \
     libicu-dev \
     libzip-dev \
     libpng-dev \
@@ -14,16 +14,23 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     libxml2-dev \
     libcurl4-openssl-dev \
-    zip \
-    libmcrypt-dev \
     mariadb-client \
     libpq-dev \
-    && docker-php-ext-install pdo pdo_mysql zip intl gd xml mbstring curl
+    && docker-php-ext-install \
+    pdo \
+    pdo_mysql \
+    zip \
+    intl \
+    gd \
+    xml \
+    mbstring \
+    curl \
+    opcache
 
-# Set PHP memory limit (🔥 THIS FIXES YOUR ERROR)
-RUN echo "memory_limit = 768M" > /usr/local/etc/php/conf.d/99-override-memory.ini
+# Set memory limit to fix OOM error
+RUN echo "memory_limit = 768M" > /usr/local/etc/php/conf.d/99-custom.ini
 
-# Enable Apache Rewrite Module
+# Enable Apache Rewrite
 RUN a2enmod rewrite
 
 # Install Composer
@@ -32,11 +39,11 @@ COPY --from=composer:2.6 /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy all files
-COPY . /var/www/html
+# Copy source code
+COPY . .
 
-# Install Mautic dependencies
-RUN composer install --no-dev --optimize-autoloader
+# Increase Composer memory and install dependencies
+RUN COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader --ignore-platform-reqs
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html
@@ -44,5 +51,5 @@ RUN chown -R www-data:www-data /var/www/html
 # Expose HTTP port
 EXPOSE 80
 
-# Start Apache
+# Start Apache server
 CMD ["apache2-foreground"]
