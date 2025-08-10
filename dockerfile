@@ -44,6 +44,10 @@ WORKDIR /var/www/html
 
 # Copy all project files into the image
 COPY . .
+# 🔧 Ensure Mautic can write config/cache/logs
+RUN mkdir -p var/cache var/logs app/config \
+ && chown -R www-data:www-data var app/config \
+ && chmod -R 775 var app/config
 
 # Set memory limits for Composer and PHP CLI
 ENV COMPOSER_MEMORY_LIMIT=-1
